@@ -1,30 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract RoleManagement {
-    mapping(address => bool) public admins;
-    address public owner;
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract RoleManagement is Ownable, AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
+    event AdminAdded(address indexed admin);
+    event AdminRemoved(address indexed admin);
 
     constructor() {
-        owner = msg.sender;
-        admins[owner] = true;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not the owner");
-        _;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(ADMIN_ROLE, msg.sender);
     }
 
     modifier onlyAdmin() {
-        require(admins[msg.sender], "Not an admin");
+        require(hasRole(ADMIN_ROLE, msg.sender), "Not an admin");
         _;
     }
 
     function addAdmin(address _admin) public onlyOwner {
-        admins[_admin] = true;
+        grantRole(ADMIN_ROLE, _admin);
+        emit AdminAdded(_admin);
     }
 
     function removeAdmin(address _admin) public onlyOwner {
-        admins[_admin] = false;
+        revokeRole(ADMIN_ROLE, _admin);
+        emit AdminRemoved(_admin);
+    }
+
+    function isAdmin(address _admin) public view returns (bool) {
+        return hasRole(ADMIN_ROLE, _admin);
+    }
+
+    function transferOwnership(address newOwner) public override onlyOwner {
+        _setupRole(DEFAULT_ADMIN_ROLE, newOwner);
+        _setupRole(ADMIN_ROLE, newOwner);
+        super.transferOwnership(newOwner);
     }
 }
